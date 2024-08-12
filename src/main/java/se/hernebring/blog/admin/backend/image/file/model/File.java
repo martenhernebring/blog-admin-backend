@@ -17,13 +17,10 @@ public class File {
   @Column(name = "id", nullable = false)
   private Long id;
   private String filePath;
-  @Embedded
-  private Meta meta;
   private OffsetDateTime time;
 
-  public File(String filePath, Meta meta) {
+  public File(String filePath) {
     this.filePath = filePath;
-    this.meta = meta;
     setTime();
   }
 
@@ -51,11 +48,4 @@ public class File {
     this.filePath = filePath;
   }
 
-  public Meta getMeta() {
-    return meta;
-  }
-
-  public void setMeta(Meta meta) {
-    this.meta = meta;
-  }
 }

@@ -14,7 +14,6 @@ import se.hernebring.blog.admin.backend.exception.NotAnImageException;
 import se.hernebring.blog.admin.backend.image.file.FileDTO;
 import se.hernebring.blog.admin.backend.image.file.model.File;
 import se.hernebring.blog.admin.backend.image.file.FileRepository;
-import se.hernebring.blog.admin.backend.image.file.model.Meta;
 import se.hernebring.blog.admin.backend.image.multipart.BadIOMultiPart;
 import se.hernebring.blog.admin.backend.image.multipart.ContentMultiPart;
 import se.hernebring.blog.admin.backend.image.multipart.CorrectMultiPart;
@@ -52,14 +51,8 @@ public class ImageServiceTest {
   @Test
   void getAllFilesUnsorted() {
     List<File> files = new ArrayList<>();
-    files.add(new File("inrikes/2022/ekonomi/1617/swaggerimage.png",
-        new Meta("lSOXNcoa5LdYv2q0ZJO9wg==",
-            "95239735ca1ae4b758bf6ab46493bdc2",
-            "6bZCa.Yn9xM05XHiXaMvZTopLdkeOBtQ")));
-    files.add(new File("inrikes/2022/ekonomi/1617/mock.png",
-        new Meta("RdoTMXFQ2Ahmug1P+Eutfw==",
-            "45da13317150d80866ba0d4ff84bad7f",
-            "8zVkx0eyjSKQP9Gd.dNBQUPkh1WjHHSO")));
+    files.add(new File("inrikes/2022/ekonomi/1617/swaggerimage.png"));
+    files.add(new File("inrikes/2022/ekonomi/1617/mock.png"));
     when(mockedFileRepository.findAll()).thenReturn(files);
     assertFalse(imageServiceTest.getAllUnsorted().isEmpty());
   }
@@ -92,23 +85,17 @@ public class ImageServiceTest {
   @Test
   void shouldThrowFileReadingExceptionWhenSaving() throws IOException {
     when(mockedFileRepository.existsByFilePath(any(String.class))).thenReturn(false);
-    when(mockedImageRepository
-        .save(any(String.class), any(MultipartFile.class))
-    ).thenThrow(new IOException());
+    doThrow(new IOException()).when(mockedImageRepository).save(any(String.class), any(MultipartFile.class));
     assertThrows(FileReadingException.class,
         () -> imageServiceTest.save(h, new BadIOMultiPart()));
   }
 
   @Test
-  void shouldReturnMetaDto() throws IOException {
+  void shouldReturnFileDto() {
     MultipartFile multiFile = new CorrectMultiPart();
-    Meta meta = new Meta("A", "B", "C");
-    File model = new File(h + multiFile.getOriginalFilename(), meta);
+    File model = new File(h + multiFile.getOriginalFilename());
     when(mockedFileRepository.existsByFilePath(any(String.class))).thenReturn(false);
-    when(mockedImageRepository
-        .save(any(String.class), any(MultipartFile.class))
-    ).thenReturn(model);
-    when(mockedFileRepository.save(any(File.class))).thenReturn(model);
+    when(mockedFileRepository.save(any())).thenReturn(model);
     FileDTO dto = imageServiceTest.save(h, multiFile);
     assertEquals(model.getTime(), dto.getTime());
   }

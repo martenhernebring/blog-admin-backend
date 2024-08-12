@@ -43,8 +43,8 @@ public class ImageService {
     String filePath = header + "/" + file.getOriginalFilename();
     if(fileRepository.existsByFilePath(filePath))
       throw new AlreadyAddedException("Image with path " + filePath + " has already been added");
-    File m = persist(header, file);
-    return new FileDTO(m.getTime(), m.getFilePath(), m.getMeta());
+    File f = persist(header, file);
+    return new FileDTO(f.getTime(), f.getFilePath());
   }
 
   private void validate(MultipartFile file) {
@@ -57,13 +57,13 @@ public class ImageService {
   }
 
   private File persist(String header, MultipartFile file) {
-    File meta;
     try{
-      meta = imageRepository.save(header, file);
+      imageRepository.save(header, file);
     } catch (IOException e) {
       throw new FileReadingException("Problem with reading file", e);
     }
-    return fileRepository.save(meta);
+    File f = new File(header + file.getOriginalFilename());
+    return fileRepository.save(f);
   }
 
   private boolean isImage(String contentType) {
