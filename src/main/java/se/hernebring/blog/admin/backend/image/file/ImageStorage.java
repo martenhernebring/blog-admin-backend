@@ -20,7 +20,7 @@ public class ImageStorage implements ImageRepository {
 //    containerClient.createIfNotExists();
 //    BlobClient blobClient = containerClient.getBlobClient(file.getOriginalFilename());
 //    blobClient.upload(file.getInputStream());
-    throw new UnsupportedOperationException();
+    System.out.println("This will be replaced with Cloud image saving soon");
   }
 
   @Override
