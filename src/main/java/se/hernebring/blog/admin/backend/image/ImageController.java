@@ -7,9 +7,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import se.hernebring.blog.admin.backend.image.file.FileDTO;
 
 import java.util.List;
@@ -36,5 +36,58 @@ public class ImageController {
   @GetMapping(value = "")
   public List<FileDTO> getAllUnsorted() {
     return imageService.getAllUnsorted();
+  }
+
+  @Operation(summary = "Save an image.")
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200",
+          description = "Successfully saved the image",
+          content = @Content(mediaType = "application/json",
+              schema = @Schema(implementation = FileDTO.class))),
+      @ApiResponse(responseCode = "409",
+          description = "Image has already been added",
+          content = @Content),
+      @ApiResponse(responseCode = "400",
+          description = "File had no content or wasn't an image",
+          content = @Content)
+  })
+  @PostMapping(value = "/{category}/{year}/{vignette}/{articleId}",
+      consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public FileDTO postImage(@PathVariable String category,
+                           @PathVariable String year,
+                           @PathVariable String vignette,
+                           @PathVariable String articleId,
+                           @RequestBody MultipartFile file) {
+    return imageService.save(category + "/" + year + "/" +
+        vignette + "/" + articleId, file);
+  }
+
+  @Operation(summary = "Download an image.")
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200",
+          description = "Successfully downloaded the image",
+          content = @Content(mediaType = "application/json",
+              schema = @Schema(type = "String", format = "byte")))
+  })
+  @GetMapping(value = "/{category}/{year}/{vignette}/{articleId}/{fileName}")
+  public byte[] download(
+      @PathVariable String category, @PathVariable String year,
+      @PathVariable String vignette, @PathVariable String articleId,
+      @PathVariable String fileName
+  ) {
+    return imageService.get(category + "/" + year + "/" +
+        vignette + "/" + articleId, fileName);
+  }
+
+  @Operation(summary = "Delete a file path or all files with no parameter.")
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200",
+          description = "Successfully deleted", content = @Content)})
+  @DeleteMapping(value = "")
+  public void deleteFilePath(@RequestParam(value = "path", required = false) String path) {
+    if(path != null)
+      imageService.deleteByFilePath(path);
+    else
+      imageService.deleteAll();
   }
 }

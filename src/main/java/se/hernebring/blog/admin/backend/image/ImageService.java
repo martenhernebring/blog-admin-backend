@@ -86,4 +86,7 @@ public class ImageService {
     fileRepository.deleteAll(filesWithPath);
   }
 
+  public void deleteAll() {
+    fileRepository.deleteAll();
+  }
 }

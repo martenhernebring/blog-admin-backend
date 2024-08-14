@@ -11,10 +11,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.util.ResourceUtils;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.multipart.MultipartFile;
+import se.hernebring.blog.admin.backend.exception.AlreadyAddedException;
+import se.hernebring.blog.admin.backend.exception.EmptyFileException;
+import se.hernebring.blog.admin.backend.exception.NotAnImageException;
 import se.hernebring.blog.admin.backend.image.file.FileDTO;
 
 import java.io.File;
@@ -27,8 +32,10 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ComponentScan(basePackages = "se.hernebring.blog.admin.backend.image")
 @WebMvcTest(ImageController.class)
@@ -82,9 +89,103 @@ public class ImageControllerTest {
     var dtos = List.of(dto);
     when(mockedService.getAllUnsorted()).thenReturn(dtos);
     String actualResponseJson =  mockMvc.perform(get(baseUrl))
-        .andExpect(MockMvcResultMatchers.status().is(HttpStatus.OK.value()))
+        .andExpect(status().is(HttpStatus.OK.value()))
         .andReturn().getResponse().getContentAsString();
     String expectedResultJson = objectMapper.writeValueAsString(dtos);
     assertEquals(expectedResultJson, actualResponseJson);
+  }
+
+  @Test
+  void postImage() throws Exception {
+    when(mockedService.
+        save(any(String.class), any(MultipartFile.class))
+    ).thenReturn(dto);
+    MvcResult mvcResult = mockMvc
+        .perform(multipart(articleUrl).file(mockedMultiFile))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    String actualResponseJson = mvcResult.getResponse().getContentAsString();
+    String expectedResultJson = objectMapper.writeValueAsString(dto);
+    assertEquals(expectedResultJson, actualResponseJson);
+  }
+
+  @Test
+  void postImageShouldReturnConflictWhenAlreadyAdded() throws Exception {
+    when(mockedService.
+        save(any(String.class), any(MultipartFile.class))
+    ).thenThrow(new AlreadyAddedException("Test"));
+    mockMvc
+        .perform(multipart(articleUrl).file(mockedMultiFile))
+        .andExpect(status().isConflict())
+        .andReturn();
+  }
+
+  @Test
+  void postImageShouldReturnEmptyFileWhenFileWasEmpty() throws Exception {
+    when(mockedService.
+        save(any(String.class), any(MultipartFile.class))
+    ).thenThrow(new EmptyFileException("Test"));
+    String aRJ = mockMvc
+        .perform(multipart(articleUrl).file(mockedMultiFile))
+        .andExpect(status().isBadRequest())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+    String err = "\"error\":\"";
+    String msg = "\",\"message\":\"";
+    assertEquals("EmptyFile",
+        aRJ.substring(aRJ.indexOf(err) + err.length(), aRJ.indexOf(msg)));
+  }
+
+  @Test
+  void postImageShouldReturnNotAnImageWhenNotAnImage() throws Exception {
+    when(mockedService.
+        save(any(String.class), any(MultipartFile.class))
+    ).thenThrow(new NotAnImageException("Test"));
+    String aRJ = mockMvc
+        .perform(multipart(articleUrl).file(mockedMultiFile))
+        .andExpect(status().isBadRequest())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+    String err = "\"error\":\"";
+    String msg = "\",\"message\":\"";
+    assertEquals("NotAnImage",
+        aRJ.substring(aRJ.indexOf(err) + err.length(), aRJ.indexOf(msg)));
+  }
+
+  @Test
+  void downloadImage() throws Exception {
+    mockMvc.perform(get(articleUrl + "/swaggerimage.png"))
+        .andExpect(MockMvcResultMatchers.status().is(HttpStatus.OK.value()));
+  }
+
+  @Test
+  void downloadImageUsingDifferentUrl() throws Exception {
+    articleUrl = baseUrl + "/INRIKES/2022/politik/1617";
+    mockMvc.perform(get(articleUrl + "/swaggerimage.png"))
+        .andExpect(MockMvcResultMatchers.status().is(HttpStatus.OK.value()));
+  }
+
+  @Test
+  void downloadImageUsingDifferentYear() throws Exception {
+    articleUrl = baseUrl + "/INRIKES/2023/politik/1617";
+    mockMvc.perform(get(articleUrl + "/swaggerimage.png"))
+        .andExpect(MockMvcResultMatchers.status().is(HttpStatus.OK.value()));
+  }
+
+  @Test
+  void downloadImageUsingDifferentCategory() throws Exception {
+    articleUrl = baseUrl + "/UTRIKES/2022/politik/1617";
+    mockMvc.perform(get(articleUrl + "/swaggerimage.png"))
+        .andExpect(MockMvcResultMatchers.status().is(HttpStatus.OK.value()));
+  }
+
+  @Test
+  void deleteFilePathTest() throws Exception {
+    mockMvc.perform(delete(baseUrl + "?path=inrikes/2022/ekonomi/1617/swaggerimage.png"))
+        .andExpect(status().isOk())
+        .andReturn();
   }
 }
